@@ -27,6 +27,7 @@
 
 ;;; Code:
 (require 'aws-iam-group-inline-policies)
+(require 'transient)
 
 (defun aws-iam-groups--list-groups ()
   "List all Lambda Functions."

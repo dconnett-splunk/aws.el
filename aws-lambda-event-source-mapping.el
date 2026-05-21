@@ -26,6 +26,8 @@
 ;; Emacs major modes wrapping the AWS CLI
 
 ;;; Code:
+(require 'transient)
+
 (defvar-local aws-lambda-event-source-mapping-current-function-name nil)
 
 (defun aws-lambda-event-source-mapping-list-from-line-under-cursor ()

@@ -26,6 +26,8 @@
 ;; Emacs major modes wrapping the AWS CLI
 
 ;;; Code:
+(require 'transient)
+
 (defun aws-codebuild--list-projects ()
   "List all Codebuild Projects."
   (fset 'aws--last-view 'aws-codebuild)

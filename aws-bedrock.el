@@ -28,6 +28,7 @@
 ;;; Code:
 (require 'json)
 (require 'markdown-mode)
+(require 'transient)
 
 (declare-function aws-cmd "aws-mode")
 

@@ -26,6 +26,7 @@
 ;; Emacs major modes wrapping the AWS CLI
 
 ;;; Code:
+(require 'transient)
 
 (defun aws-s3-lb ()
   "List all S3 Buckets in a tabulated list view."

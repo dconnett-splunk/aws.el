@@ -26,6 +26,7 @@
 ;; Emacs major modes wrapping the AWS CLI
 
 ;;; Code:
+(require 'transient)
 
 (defun aws-codepipeline-list-pipelines ()
   "List all CodePipelines."
