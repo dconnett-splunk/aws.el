@@ -91,6 +91,19 @@
   (kbd "q") #'aws
   (kbd "s") #'aws-codepipeline--get-pipeline-state)
 
+;; aws-ec2-mode
+(evil-define-key 'normal aws-ec2-mode-map
+  (kbd "RET") #'aws-ec2-describe-instance
+  (kbd "?")   #'aws-ec2-help-popup
+  (kbd "S")   #'aws-ec2-start-instance
+  (kbd "s")   #'aws-ec2-stop-instance
+  (kbd "r")   #'aws-ec2-reboot-instance
+  (kbd "T")   #'aws-ec2-terminate-instance
+  (kbd "m")   #'aws-ec2-start-ssm-session
+  (kbd "g")   #'aws-ec2-list-instances-refresh
+  (kbd "P")   #'aws-set-profile
+  (kbd "q")   #'aws)
+
 ;; aws-events-mode
 (evil-define-key 'normal aws-events-mode-map
   (kbd "RET") #'aws-events-rules
