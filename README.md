@@ -73,6 +73,11 @@ commands in the AWS CLI itself.
 - CloudWatch
     - List CloudWatch Alarms in Account
         - Enable/Disable ActionsEnabled field 
+- EC2
+    - List Instances
+    - Describe Instance
+    - Start, stop, reboot, and terminate Instances
+    - Start SSM Session
 - Lambda
     - List Lambda Functions in Account
     - Describe Lambda Function
