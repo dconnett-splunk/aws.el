@@ -88,8 +88,10 @@ commands in the AWS CLI itself.
         - Describe Event Source Mapping
         - Update Event Source Mapping
 - Logs
-    - List Log Groups in Account 
+    - List Log Groups in Account
+    - Open CloudWatch Logs console URLs
     - Get Log Streams of a Log Group
+        - Filter Log Streams by Prefix
         - Describe Log Stream
         - Get Log Events
 - S3

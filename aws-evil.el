@@ -62,7 +62,7 @@
 
 ;; aws-cloudwatch-mode
 (evil-define-key 'normal aws-cloudwatch-mode-map
-  (kbd "RET") #'aws-cloudwatch-alarms
+  (kbd "RET") #'aws-cloudwatch-get-service
   (kbd "P")   #'aws-set-profile
   (kbd "q")   #'aws)
 
@@ -169,13 +169,19 @@
 (evil-define-key 'normal aws-logs-mode-map
   (kbd "RET")   #'aws-logs-describe-log-group
   (kbd "?")     #'aws-logs-help-popup
+  (kbd "e")     #'aws-logs-get-log-events
+  (kbd "g")     #'aws-logs-describe-log-groups-refresh
   (kbd "P")     #'aws-set-profile
   (kbd "q")     #'aws
-  (kbd "s")     #'aws-log-streams-from-line-under-cursor)
+  (kbd "s")     #'aws-log-streams-from-line-under-cursor
+  (kbd "u")     #'aws-logs-open-console-url)
 
 ;; aws-log-streams
 (evil-define-key 'normal aws-log-streams-mode-map
   (kbd "RET") #'aws-log-streams-get-log-event-in-view
+  (kbd "?")   #'aws-log-streams-help-popup
+  (kbd "/")   #'aws-log-streams-set-prefix
+  (kbd "g")   #'aws-log-streams-refresh
   (kbd "P")   #'aws-set-profile
   (kbd "q")   #'aws-logs)
 

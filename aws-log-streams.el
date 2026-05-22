@@ -26,50 +26,135 @@
 ;; Emacs major modes wrapping the AWS CLI
 
 ;;; Code:
+(require 'json)
+(require 'subr-x)
+(require 'transient)
 
 (defvar-local aws-log-streams-current-group-name nil)
+(defvar-local aws-log-streams-current-prefix nil)
 
-(defun aws-log-streams-get-latest-logs-command (log-group-name &optional count)
+(defun aws-log-streams--quote (value)
+  "Return VALUE quoted for use in an AWS CLI shell command."
+  (shell-quote-argument value))
+
+(defun aws-log-streams-get-latest-logs-command (log-group-name &optional count prefix)
   "Return the aws command to retrieve the latest logs for LOG-GROUP-NAME.
-An optional COUNT ca be passed to limit the maximum amount of log events."
-  (let ((max-items-string (if count
-                             (concat "--max-items " count)
-                           "")))
-    (concat "logs describe-log-streams --log-group-name '"
-            log-group-name
-            "' --output=text --query 'logStreams[*].logStreamName'"
-            " --order-by LastEventTime "
-            " --descending "
+An optional COUNT can be passed to limit the maximum amount of log events.
+An optional PREFIX can be passed to filter log streams by name."
+  (let* ((has-prefix (and prefix (not (string-empty-p prefix))))
+         (max-items-string (if count (concat " --max-items " count) ""))
+         (prefix-string (if has-prefix
+                            (concat " --log-stream-name-prefix "
+                                    (aws-log-streams--quote prefix))
+                          ""))
+         (order-string (unless has-prefix
+                         " --order-by LastEventTime --descending")))
+    (concat "logs describe-log-streams --log-group-name "
+            (aws-log-streams--quote log-group-name)
+            " --output text"
+            " --query 'logStreams[*].[logStreamName,lastEventTimestamp,storedBytes]'"
+            order-string
+            prefix-string
             max-items-string)))
 
-(defun aws-log-streams-describe-log-streams (log-group-name)
+(defun aws-log-streams-describe-log-streams (log-group-name &optional prefix)
   "Tabulated-list-view of the log streams for a given LOG-GROUP-NAME."
-  (aws-core--tabulated-list-from-command
-   (aws-log-streams-get-latest-logs-command log-group-name)
-   [("Log Streams" 100)]))
+  (aws-core--tabulated-list-from-command-multi-column
+   (aws-log-streams-get-latest-logs-command log-group-name nil prefix)
+   [("Log Streams" 90) ("Last Event" 18) ("Stored Bytes" 12)]))
+
+(defun aws-log-streams-refresh ()
+  "Refresh the current log streams buffer."
+  (interactive)
+  (unless aws-log-streams-current-group-name
+    (user-error "No CloudWatch Logs group is active"))
+  (let ((current-line (aws-core--get-current-line)))
+    (message "Refreshing buffer...")
+    (aws-log-streams-describe-log-streams
+     aws-log-streams-current-group-name
+     aws-log-streams-current-prefix)
+    (forward-line current-line)
+    (message "Buffer refreshed")))
+
+(defun aws-log-streams-set-prefix (prefix)
+  "Filter the current log stream list by PREFIX."
+  (interactive "sLog stream prefix: ")
+  (unless aws-log-streams-current-group-name
+    (user-error "No CloudWatch Logs group is active"))
+  (setq-local aws-log-streams-current-prefix
+              (unless (string-empty-p prefix) prefix))
+  (aws-log-streams-describe-log-streams
+   aws-log-streams-current-group-name
+   aws-log-streams-current-prefix))
 
 (defun aws-log-streams-get-log-event-in-view ()
   "Get the log events for the current log stream."
   (interactive)
-  (let ((current-log-stream-name (aref (tabulated-list-get-entry) 0)))
+  (let ((current-log-stream-name (tabulated-list-get-id)))
     (aws-log-streams-get-log-event aws-log-streams-current-group-name current-log-stream-name)))
+
+(defun aws-log-streams--event-timestamp (millis)
+  "Format CloudWatch Logs MILLIS as a UTC timestamp."
+  (format-time-string "%Y-%m-%dT%H:%M:%SZ"
+                      (seconds-to-time (/ millis 1000))
+                      t))
+
+(defun aws-log-streams--insert-events (output)
+  "Insert CloudWatch Logs events from JSON OUTPUT into the current buffer."
+  (let* ((json-object-type 'alist)
+         (json-array-type 'list)
+         (json-key-type 'symbol)
+         (events (alist-get 'events (json-read-from-string output))))
+    (dolist (event events)
+      (insert
+       (format "%s\t%s\n"
+               (aws-log-streams--event-timestamp
+                (alist-get 'timestamp event))
+               (or (alist-get 'message event) ""))))))
 
 (defun aws-log-streams-get-log-event (log-group log-stream)
   "Get the log events for the LOG-GROUPs LOG-STREAM."
   (let ((buffer (concat "*" log-group ": " log-stream "*"))
         (cmd (concat
               (aws-cmd)
-              "logs get-log-events --log-group-name '" log-group
-              "' --log-stream-name '" log-stream "'"
-               " --output=" aws-output)))
+              "logs get-log-events --log-group-name "
+              (aws-log-streams--quote log-group)
+              " --log-stream-name "
+              (aws-log-streams--quote log-stream)
+              " --start-from-head --output json")))
     (setq aws--last-command cmd)
-    (call-process-shell-command cmd nil buffer)
+    (with-current-buffer (get-buffer-create buffer)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (format "Log group:  %s\nLog stream: %s\n\n" log-group log-stream))
+        (let ((output (shell-command-to-string (concat cmd " 2>&1"))))
+          (condition-case err
+              (aws-log-streams--insert-events output)
+            (error
+             (insert (format "Failed to parse log events: %s\n\nCommand:\n%s\n\nOutput:\n%s"
+                             err
+                             cmd
+                             output))))))
+      (goto-char (point-min))
+      (view-mode 1))
     (switch-to-buffer buffer)
-    (with-current-buffer buffer (aws--get-view-mode))))
+    (setq buffer-read-only t)))
+
+(transient-define-prefix aws-log-streams-help-popup ()
+  "AWS Log Streams Menu"
+  ["Actions"
+   ("RET" "Get Log Events" aws-log-streams-get-log-event-in-view)
+   ("/" "Filter Stream Prefix" aws-log-streams-set-prefix)
+   ("g" "Refresh Buffer" aws-log-streams-refresh)
+   ("P" "Set AWS Profile" aws-set-profile)
+   ("q" "Log Groups" aws-logs)])
 
 (defvar aws-log-streams-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'aws-log-streams-get-log-event-in-view)
+    (define-key map (kbd "?") 'aws-log-streams-help-popup)
+    (define-key map (kbd "/") 'aws-log-streams-set-prefix)
+    (define-key map (kbd "g") 'aws-log-streams-refresh)
     (define-key map (kbd "P") 'aws-set-profile)
     (define-key map (kbd "q") 'aws-logs)
     map))
@@ -78,9 +163,7 @@ An optional COUNT ca be passed to limit the maximum amount of log events."
   "Get the Log Streams for the Log Group under the cursor.
 Used from the aws-logs mode."
   (interactive)
-  (let ((log-group-name (car
-                         (split-string
-                          (thing-at-point 'line)))))
+  (let ((log-group-name (tabulated-list-get-id)))
     (aws-log-streams log-group-name)))
 
 (defun aws-log-streams (log-group-name)
@@ -89,6 +172,7 @@ Used from the aws-logs mode."
   (aws--pop-to-buffer (aws--buffer-name "log-streams"))
   (aws-log-streams-mode)
   (setq-local aws-log-streams-current-group-name log-group-name)
+  (setq-local aws-log-streams-current-prefix nil)
   (aws-log-streams-describe-log-streams log-group-name))
 
 (define-derived-mode aws-log-streams-mode tabulated-list-mode "aws-log-streams"

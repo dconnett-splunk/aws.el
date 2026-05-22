@@ -30,7 +30,8 @@
 (defun aws-cloudwatch--list ()
   "List all CloudWatch services."
   (interactive)
-  (let ((rows (list '("alarms" ["alarms"]))))
+  (let ((rows (list '("alarms" ["alarms"])
+                    '("logs" ["logs"]))))
     (fset 'aws--last-view 'aws-cloudwatch)
     (setq tabulated-list-format [("CloudWatch" 100)])
     (setq tabulated-list-entries rows)
@@ -38,10 +39,18 @@
     (tabulated-list-print)
     (hl-line-mode 1)))
 
+(defun aws-cloudwatch-get-service ()
+  "Open the CloudWatch service under the cursor."
+  (interactive)
+  (let ((service (tabulated-list-get-id)))
+    (cond ((equal service "alarms") (aws-cloudwatch-alarms))
+          ((equal service "logs") (aws-logs))
+          (t (message "Unknown CloudWatch service %s" service)))))
+
 ;; MODE-MAP
 (defvar aws-cloudwatch-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'aws-cloudwatch-alarms)
+    (define-key map (kbd "RET") 'aws-cloudwatch-get-service)
     (define-key map (kbd "P") 'aws-set-profile)
     (define-key map (kbd "q") 'aws)
     map))
