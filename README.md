@@ -78,6 +78,11 @@ commands in the AWS CLI itself.
     - Describe Instance
     - Start, stop, reboot, and terminate Instances
     - Start SSM Session
+- ECR
+    - List Private Repositories
+    - Describe Repository
+    - List Repository Images
+    - Describe Image
 - Lambda
     - List Lambda Functions in Account
     - Describe Lambda Function

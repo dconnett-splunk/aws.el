@@ -104,6 +104,23 @@
   (kbd "P")   #'aws-set-profile
   (kbd "q")   #'aws)
 
+;; aws-ecr-mode
+(evil-define-key 'normal aws-ecr-mode-map
+  (kbd "RET") #'aws-ecr-describe-repository
+  (kbd "?")   #'aws-ecr-help-popup
+  (kbd "i")   #'aws-ecr-list-images
+  (kbd "g")   #'aws-ecr-list-repositories-refresh
+  (kbd "P")   #'aws-set-profile
+  (kbd "q")   #'aws)
+
+;; aws-ecr-images-mode
+(evil-define-key 'normal aws-ecr-images-mode-map
+  (kbd "RET") #'aws-ecr-describe-image
+  (kbd "?")   #'aws-ecr-images-help-popup
+  (kbd "g")   #'aws-ecr-list-images-refresh
+  (kbd "P")   #'aws-set-profile
+  (kbd "q")   #'aws-ecr)
+
 ;; aws-events-mode
 (evil-define-key 'normal aws-events-mode-map
   (kbd "RET") #'aws-events-rules
